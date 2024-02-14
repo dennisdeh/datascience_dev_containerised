@@ -1,0 +1,75 @@
+# Docker compose file for setting up a useful containerised data scientific
+# development environment, that has a database for storing data and information
+# about various runs (db), an administration api (adminer) to access the databases,
+# and finally python container (py) where python code can be executed.
+#
+# A python module called database.py is included in .\c1_python\app\utils\
+# and allows for easily saving to or loading from the database. Python
+# files should be put in .\c1_python\app\ and will be copied into the container,
+# with main.py being run as default (see 'command: /bin/bash ...' below).
+#
+# To run: Navigate into the repository in the terminal and type:
+#   docker compose up
+#
+# Default usernames, passwords and ports are globally set in the .env file.
+#
+# Images used are:
+#   db: mariadb:latest
+#   py: python:3.9-slim (can also be changed to an image with jupyter if required)
+#   adminer: adminer:latest
+
+version: '3.8'
+
+services:
+  # C0: databases
+  db:
+    container_name: database
+    image: mariadb:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MARIADB_USER: ${MARIADB_USER}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+    ports:
+      - ${DB_PORT_HOST}:${DB_PORT_CONT}
+    volumes:
+      # bind-mount the sql files that should be run while initialising
+      - ./c0_database/init:/docker-entrypoint-initdb.d
+    healthcheck:  # define health-check that service is ready
+      interval: 2s
+      retries: 20
+      test:
+        [
+          "CMD",
+          "healthcheck.sh",
+          "--su-mysql",
+          "--connect",
+          "--innodb_initialized"
+        ]
+      timeout: 30s
+  # C1: python api
+  py:
+    container_name: c1_python
+    image: python:3.9-slim
+    depends_on:  # must only start once db is completely started (=container healthy)
+      db:
+        condition: service_healthy
+    links:  # must be able to connect to db
+      - db
+    volumes:
+      - ./c1_python/app:/app
+    environment:
+      - DB_USER=${MARIADB_USER}   # = user for connecting to db (all permissions are granted for two tables)
+      - DB_PASSWORD=${MARIADB_PASSWORD}
+      - DB_HOST=db  # = service name
+      - DB_PORT=${DB_PORT_CONT}   # = container exposed port
+    command: /bin/bash -c "pip install -r /app/requirements.txt && python /app/main.py"  # install packages and run main
+  # CX: adminer
+  adminer:
+    container_name: adminer
+    image: adminer:latest
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    restart: always
+    ports:
+      - ${ADMINER_PORT_HOST}:${ADMINER_PORT_CONT}
