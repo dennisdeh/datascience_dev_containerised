@@ -6,9 +6,9 @@ development environment with jupyter, that has a database for storing data and i
 about various runs (db), an administration api (adminer) to access and administrate the database.
 
 ### Development
-A python module called database.py is included in .\c1_python\app\utils
+A python module called [database.py](c1_python/app/utils/database.py) is included
 and allows for easily saving to or loading from the database and to see the
-current data. A template workflow is found in main.ipynb\
+current data. A template workflow is found in the jupyter notebook [main.ipynb](c1_python/app/main.ipynb).
 Default usernames, passwords, tokens and ports are globally set in the .env file.
 
 ### To run
@@ -23,6 +23,6 @@ and enter the token you set in .env.
 ### Additional information
 Images used for the containers are:
 > db: mariadb:latest\
-> jupyter: jupyter/scipy-notebook:latest (see https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html for other images for R and Julia)\
+> jupyter: jupyter/scipy-notebook:latest ([see here](https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html) for other images with R and Julia)\
 > adminer: adminer:latest
 
