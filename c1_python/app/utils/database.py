@@ -41,20 +41,28 @@ def save(df: pd.DataFrame,
                    if_exists="append")
     conn.close()
 
-
-def load(table_name: str):
+def current_data():
     """
-    Load the data from the database
+    Shows the current data saved in the database.
 
-    :param table_name:
     :return: pd.Dataframe
     """
-    # 1: load meta-data and perform checks
     engine = create_engine(f'mysql+mysqlconnector://{os.environ["DB_USER"]}:{os.environ["DB_PASSWORD"]}@'
                            f'{os.environ["DB_HOST"]}:{os.environ["DB_PORT"]}/{runs_db_name}')
     conn = engine.connect()
     df_meta = pd.read_sql_table(table_name=runs_table_name, con=conn)
     conn.close()
+    return df_meta
+
+def load(table_name: str):
+    """
+    Load the data from the database.
+
+    :param table_name:
+    :return: pd.Dataframe
+    """
+    # 1: load meta-data and perform checks
+    df_meta = current_data()
     # check that the table exists
     if not table_name in df_meta['table_name'].values:
         raise ValueError("Table not found in the database")
@@ -72,3 +80,5 @@ def load(table_name: str):
     # treatment of data loaded from container database
     df = df.infer_objects()
     return df
+
+

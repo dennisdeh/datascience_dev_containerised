@@ -1,21 +1,23 @@
 # Docker compose file for setting up a useful containerised data scientific
-# development environment, that has a database for storing data and information
-# about various runs (db), an administration api (adminer) to access the databases,
-# and finally python container (py) where python code can be executed.
+# development environment using jupyter, that has a database for storing data and
+# information about various runs (db), an administration api (adminer) to access
+#  the databases.
 #
 # A python module called database.py is included in .\c1_python\app\utils\
-# and allows for easily saving to or loading from the database. Python
-# files should be put in .\c1_python\app\ and will be copied into the container,
-# with main.py being run as default (see 'command: /bin/bash ...' below).
+# and allows for easily saving to or loading from the database and to see the
+# current data. A template workflow is found in main.ipynb
+#
+# Default usernames, passwords, tokens and ports are globally set in the .env file.
 #
 # To run: Navigate into the repository in the terminal and type:
 #   docker compose up
-#
-# Default usernames, passwords and ports are globally set in the .env file.
+# Then go to your browser and navigate to:
+#   http://localhost:8888/lab (or modify to what port you set in .env)
+# and enter the token you set in .env
 #
 # Images used are:
 #   db: mariadb:latest
-#   py: python:3.9-slim (can also be changed to an image with jupyter if required)
+#   jupyter: jupyter/scipy-notebook:latest (see https://jupyter-docker-stacks.readthedocs.io/en/latest/using/selecting.html for other images for R and Julia)
 #   adminer: adminer:latest
 
 version: '3.8'
@@ -47,23 +49,28 @@ services:
           "--innodb_initialized"
         ]
       timeout: 30s
-  # C1: python api
-  py:
+  # C1: python api (jupyter)
+  jupyter:
     container_name: c1_python
-    image: python:3.9-slim
+    image: quay.io/jupyter/scipy-notebook:latest
     depends_on:  # must only start once db is completely started (=container healthy)
       db:
         condition: service_healthy
     links:  # must be able to connect to db
       - db
     volumes:
-      - ./c1_python/app:/app
+      - ./c1_python/initialisation:/initialisation  # initialisation
+      - ./c1_python/app:/home/jovyan  # working directory for jupyter
     environment:
       - DB_USER=${MARIADB_USER}   # = user for connecting to db (all permissions are granted for two tables)
       - DB_PASSWORD=${MARIADB_PASSWORD}
       - DB_HOST=db  # = service name
       - DB_PORT=${DB_PORT_CONT}   # = container exposed port
-    command: /bin/bash -c "pip install -r /app/requirements.txt && python /app/main.py"  # install packages and run main
+    # install packages and start jupyter
+    command: /bin/bash -c "pip install -r /initialisation/requirements.txt &&\
+      start-notebook.sh --IdentityProvider.token=${JUPYTER_TOKEN}"
+    ports:
+      - ${JUPYTER_PORT_HOST}:${JUPYTER_PORT_CONT}
   # CX: adminer
   adminer:
     container_name: adminer
